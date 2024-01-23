@@ -3,7 +3,6 @@ from equations import eq
 import sys
 from flask_cors import CORS
 from simplifyraw import simplifyraw
-import re
 from openai import OpenAI
 import normalization
 
