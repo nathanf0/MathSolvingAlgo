@@ -1,11 +1,18 @@
 from flask import Flask, request, jsonify
-from equations import eq, normalize, unnormalize
+from equations import eq
 import sys
 from flask_cors import CORS
 from simplifyraw import simplifyraw
 import re
 from openai import OpenAI
 import normalization
+
+"""
+Please Note that throughout this entire project, I have prioritized development speed over perfection. I am aware
+there are many redundancies, as well as points where code may have faster time complexity or more efficient memory
+allocation. My aim is not to fix that yet. My aim is to prove that this theory of solving math problems discretely
+is better than solving math problems by generating tokens.
+"""
 
 app = Flask(__name__)
 CORS(app)
@@ -18,52 +25,20 @@ def askchatgpt(content):
                     {"role": "user",
                            "content": content}],
                 n=1,
-                max_tokens=100
+                max_tokens=200
             )
     jt = sentence.choices[0].message.content
     return jt
-#Normalize data to be fed into solving algorithms
-def normalvar(arr):
-    arr = arr.replace(' ', '')
-    normalized = re.sub(r'(?<![\+\-\*/\^(])-(?![\+\-\*/\^\d])', '+-', arr)
-    # Add a '+' after an opening parenthesis if the expression starts with a negative number
-    normalized = re.sub(r'\(\-(\d+\.?\d*)\)', r'(+\1)', normalized)
 
-
-    # Normalize standalone subtraction (e.g., '4-6' becomes '4+-6')
-    arr = re.sub(r'(\d+\.?\d*)-(?=\d)', r'\1+-', normalized)
-    arr = arr.replace('ln', '%')
-    arr = arr.replace('arccsc', '1/arcsin')
-    arr = arr.replace('arcsec', '1/arccos')
-    arr = arr.replace('arccot', '1/arctan')
-    arr = arr.replace('arcsin', '¸')
-    arr = arr.replace('arccos', '®')
-    arr = arr.replace('arctan', '¯')
-    arr = arr.replace('csc', '/sin')
-    arr = arr.replace('sec', '/cos')
-    arr = arr.replace('cot', '/tan')
-    arr = arr.replace('sin', '@')
-    arr = arr.replace('cos', '?')
-    arr = arr.replace('tan', ';')
-    arr = arr.replace('sqrt', '¿')
-    arr = arr.replace('cbrt', '»')
-    return arr
-#Unnormalize some data
-def unnormalvar(arr):
-    arr = arr.replace('%', 'ln')
-    arr = arr.replace('@', 'sin')
-    arr = arr.replace('?', 'cos')
-    arr = arr.replace(';', 'tan')
-    return arr
 #Process Input
 def process_input(user_inputs):
     user_input = askchatgpt(user_inputs)
+    user_input = user_input.replace(' ', '')
     with open('output.txt', 'w') as f:
         sys.stdout = f
         try:
-            usernormal = user_input
-            usernormalsplit = usernormal.split(',')
-            usernormal = normalvar(usernormal)
+            usernormalsplit = user_input.split(',')
+            usernormal = normalization.normalizeraw(user_input)
             list_vars = []
             for char in usernormal:
                 if char.isalpha():
@@ -76,6 +51,8 @@ def process_input(user_inputs):
             elif all(i == list_vars[0] for i in list_vars):
                 eq(user_input, list_vars[0])
             else:
+                #Sometimes chatgpt returns a sentence. I have not
+                # cared about prompt optimization because ideally it would have a local fine-turned LLM in the future anyways.
                 return process_input(user_inputs)
         finally:
             sys.stdout = sys.__stdout__
@@ -103,7 +80,6 @@ def process_user_input():
 
 if __name__ == '__main__':
     app.run(debug=True)
-
 
 
 
