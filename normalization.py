@@ -1,7 +1,7 @@
-from sympy import sympify, simplify, symbols
+from sympy import sympify, simplify
 import re
 from removebrackets import removeBrackets
-import simplifyraw
+
 #Convert to mathjax format for nice display on page
 def mathjax(eq):
     pattern = r'sqrt\((.*?)\)'
@@ -77,7 +77,6 @@ def normalize(equation, var):
 #Normalize data that does not contain variables
 def normalizeraw(equation):
     arr = equation.replace(' ', '')
-    arr = arr.replace('**', '^')
     arr = arr.replace('+-', '-')
 
     normalized = re.sub(r'(?<![\+\-\*/\^(a-z)])-(?![\+\-\*/\^\d])', '+-', arr)
@@ -111,20 +110,18 @@ def normalizeraw(equation):
 def simplified(eq, var):
     try:
         eq = normalize(eq, var)
-        eq = eq.replace(' ', '')
-        eq = eq.replace('**', '^')
         eq = removeBrackets(eq)
         eq = unnormalize(eq, var)
         eq = re.sub(rf'(\d+){var}', r'\1*' + var, eq)
         try:
             equation = sympify(eq)
             simplified_equation = simplify(equation)
-            simplified_equation = str(simplified_equation)
-            simplified_equation = simplified_equation.replace('**', '^')
-            simplified_equation = simplified_equation.replace(' ', '')
-            simplified_equation = simplified_equation.replace('log', 'ln')
         except:
             pass
+        simplified_equation = str(simplified_equation)
+        simplified_equation = simplified_equation.replace('**', '^')
+        simplified_equation = simplified_equation.replace(' ', '')
+        simplified_equation = simplified_equation.replace('log', 'ln')
         patterncbrt = r'(\d+)\^\(1/3\)'
         patternsqrt = r'(\d+)\^\(1/2\)'
         simplified_equation = re.sub(patterncbrt, r'»(\1)', simplified_equation)
@@ -135,10 +132,9 @@ def simplified(eq, var):
         return eq
 #Unnormalize the data so it doesn't look odd
 def unnormalize(str, var):
-    str = str.replace('**', '^')
-    two = str.replace('~', '+')
-    three = two.replace('#', '*')
-    arr = three.replace('$', '/')
+    str = str.replace('~', '+')
+    str = str.replace('#', '*')
+    arr = str.replace('$', '/')
     arr = arr.replace('&', '^')
     arr = re.sub(r'(\d+)\*([¿»%¸®¯@?;])', r'\1\2', arr)
     arr = re.sub(rf'(\d+)\*{var}', r'\1'+var, arr)
