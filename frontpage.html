@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Page</title>
+    <script type="text/javascript" async
+            src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML">
+    </script>
+    <!-- Include mathjs library (use a CDN or download and host locally) -->
+
+    <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({
+            tex2jax: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                processEscapes: true
+            }
+        });
+    </script>
+    <style>
+        body, html {
+            font-family: 'Arial Rounded MT Bold', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-image: linear-gradient(to top,#242424, #252525);
+            background-color: #3D3D3D;
+            height: 100%;
+        }
+
+        .container {
+            border: 0;
+            padding: 0;
+            background-color: #c4c4c4;
+            width: calc(65%);
+            height: calc(90%);
+            margin-bottom: 4.5%;
+            margin-top: 3%;
+            margin-left: 17.5%;
+            margin-right: 17.5%;
+            border-radius: 3px;
+            position: relative;
+        }
+
+        .text-entry-box {
+            width: calc(95%);
+            padding: 10px;
+            box-sizing: border-box;
+            border: 1px solid #51585E;
+            background-color: #fff;
+            color: #000;
+            font-size: 16px;
+            font-weight: light;
+            letter-spacing: 1px;
+            outline: none;
+            margin: 0 auto;
+            margin-left: 2.5%;
+            border-radius: 3px;
+            font-family: 'Arial Rounded MT Bold', sans-serif;
+            position: absolute;
+            bottom: 15px;
+        }
+
+        #text-container {
+            width: calc(95%);
+            padding: 10px;
+            box-sizing: border-box;
+            border: none;
+            background-color: #c4c4c4;
+            color: #303030;
+            font-size: 16px;
+            font-weight: normal;
+            letter-spacing: 1px;
+            outline: none;
+            margin: 0 auto;
+            margin-left: 2.5%;
+            border-radius: 10px;
+            font-family: 'Arial Rounded MT Bold', sans-serif;
+            position: absolute;
+            top: 10px;
+            animation: typing 1s steps(40, end);
+            white-space: pre-line;
+        }
+
+        @keyframes typing {
+            from { width: 0; }
+            to { width: 100%; }
+        }
+
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="chat-container">
+        <div id="text-container"></div>
+    </div>
+    <input type="text" class="text-entry-box" placeholder="Enter a question" onkeydown="handleKeyPress(event)" />
+</div>
+
+<script>
+
+document.addEventListener('DOMContentLoaded', function () {
+    const userInput = document.querySelector('.text-entry-box');
+    userInput.addEventListener('keydown', handleKeyPress);
+
+    const textContainer = document.getElementById('text-container');
+
+    function handleKeyPress(event) {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            sendUserInput();
+        }
+    }
+
+    function sendUserInput() {
+        const inputText = userInput.value.trim();
+        if (!inputText) return;
+
+        userInput.value = '';
+
+        fetch('http://127.0.0.1:5000/process_user_input', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ "userInput": inputText }),
+        })
+            .then(response => response.json())
+            .then(data => {
+                let temp = JSON.stringify(data.result);
+                let result = temp.slice(1, -1).replace(/\\\\/g, '&#92;').split(/\\n/);
+
+                function appendText(index) {
+    if (index < result.length) {
+
+        if (result[index][0] === '$') {
+            const lineContainer = document.createElement('div');
+            lineContainer.innerHTML = result[index];
+            textContainer.appendChild(lineContainer);
+
+            MathJax.Hub.Queue(["Typeset", MathJax.Hub, lineContainer], function () {
+                return new Promise(resolve => {
+                    setTimeout(() => {
+                        resolve(appendText(index + 1));
+                    }, 100); // Adjust the delay after typesetting
+                });
+            });
+        } else {
+            const lineContainer = document.createElement('div');
+            textContainer.appendChild(lineContainer);
+
+            const appendChars = async () => {
+                for (let j = 0; j < result[index].length; j++) {
+                    await new Promise(resolve => {
+                        setTimeout(() => {
+                            console.log(result[index][j]);
+                            lineContainer.textContent += result[index][j];
+                            resolve();
+                        }, 1000/result[index].length);
+                    });
+                }
+            };
+
+            appendChars().then(() => appendText(index + 1));
+        }
+    }
+}
+
+
+                appendText(0);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                textContainer.textContent += '\nAPI Error: Unable to fetch data.';
+            });
+    }
+});
+
+</script>
+</body>
+</html>
+
